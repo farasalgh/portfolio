@@ -142,7 +142,7 @@ const Projects = () => {
 
         const readmeResults = await Promise.all(readmePromises)
         const readmeMap = readmeResults.reduce((acc, { repoName, content }) => {
-          acc[repoName] = content
+          acc[repoName] = typeof content === 'string' ? content : content.content
           return acc
         }, {} as Record<string, string>)
 

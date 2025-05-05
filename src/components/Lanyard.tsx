@@ -75,11 +75,11 @@ const Lanyard = () => {
       <div className="flex items-center space-x-4">
         <div className="relative">
           <Image
-            src="/lanyard.png"
-            alt="Discord Status"
-            width={400}
-            height={100}
-            className="rounded-lg"
+            src={`https://cdn.discordapp.com/avatars/${data.discord_user.id}/${data.discord_user.avatar}.png`}
+            alt={data.discord_user.username}
+            width={48}
+            height={48}
+            className="w-12 h-12 rounded-full"
           />
           <div
             className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${getStatusColor(

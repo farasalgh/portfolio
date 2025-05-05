@@ -4,9 +4,8 @@ import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
 import { useState } from 'react'
 import { GlobeAltIcon, BriefcaseIcon, AcademicCapIcon, CodeBracketIcon } from '@heroicons/react/24/outline'
-import Lanyard from './Lanyard'
 import axios from 'axios'
-import { Mail, Send, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Send, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 interface TimelineItemProps {
   title: string
