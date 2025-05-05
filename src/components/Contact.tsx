@@ -8,6 +8,15 @@ import Lanyard from './Lanyard'
 import axios from 'axios'
 import { Mail, Send, AlertCircle, CheckCircle2 } from 'lucide-react'
 
+interface TimelineItemProps {
+  title: string
+  subtitle: string
+  date: string
+  description: string
+  icon: React.ComponentType<{ className?: string }>
+  isLast?: boolean
+}
+
 const TimelineItem = ({ 
   title, 
   subtitle, 
@@ -15,14 +24,7 @@ const TimelineItem = ({
   description, 
   icon: Icon, 
   isLast = false 
-}: { 
-  title: string
-  subtitle: string
-  date: string
-  description: string
-  icon: any
-  isLast?: boolean
-}) => (
+}: TimelineItemProps) => (
   <div className="relative pl-8 pb-8">
     {!isLast && (
       <div className="absolute left-4 top-0 h-full w-0.5 bg-gradient-to-b from-blue-500 to-purple-500" />

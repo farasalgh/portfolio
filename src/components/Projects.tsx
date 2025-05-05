@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
 import axios from 'axios'
 import { StarIcon, CodeBracketIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
+import { Github, ExternalLink } from 'lucide-react'
 
 interface Repository {
   id: number
@@ -14,6 +15,11 @@ interface Repository {
   language: string
   stargazers_count: number
   readme?: string
+  updated_at: string
+}
+
+interface ReadmeContent {
+  content: string
 }
 
 const ProjectCard = ({ 
@@ -95,105 +101,57 @@ const ProjectCard = ({
 
 const Projects = () => {
   const [repos, setRepos] = useState<Repository[]>([])
-  const [loading, setLoading] = useState(true)
+  const [readmes, setReadmes] = useState<Record<string, string>>({})
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [ref, inView] = useInView({
     triggerOnce: true,
     threshold: 0.1,
   })
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchRepos = async () => {
       try {
-        setLoading(true)
-        
-        // Check if token exists
-        const token = process.env.NEXT_PUBLIC_GITHUB_TOKEN
-        const headers = token 
-          ? {
-              Authorization: `Bearer ${token}`,
-              Accept: 'application/vnd.github.v3+json'
-            }
-          : {
-              Accept: 'application/vnd.github.v3+json'
-            }
-
-        // Fetch repositories
-        const reposResponse = await axios.get(
-          'https://api.github.com/users/farasalgh/repos?sort=updated&direction=desc&per_page=10',
-          { headers }
+        const reposResponse = await axios.get<Repository[]>(
+          'https://api.github.com/users/farasalgh/repos?sort=updated&direction=desc&per_page=4'
         )
         
-        // Filter out 'farasalgh' and take only the 4 newest
-        const filteredRepos = reposResponse.data
-          .filter((repo: any) => repo.name.toLowerCase() !== 'farasalgh')
-          .slice(0, 4)
-
-        // Only try to fetch READMEs if we have a token
-        const reposWithReadme = await Promise.all(
-          filteredRepos.map(async (repo: any) => {
-            if (!token) return repo // Skip README fetch if no token
-            
-            try {
-              // First check if README exists
-              const readmeCheck = await axios.get(
-                `https://api.github.com/repos/farasalgh/${repo.name}/contents`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: 'application/vnd.github.v3+json'
-                  }
-                }
-              )
-
-              // Find README file (case insensitive)
-              const readmeFile = readmeCheck.data.find((file: any) => 
-                file.name.toLowerCase().includes('readme')
-              )
-
-              if (readmeFile) {
-                const readmeResponse = await axios.get(
-                  `https://api.github.com/repos/farasalgh/${repo.name}/readme`,
-                  {
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                      Accept: 'application/vnd.github.v3.raw'
-                    }
-                  }
-                )
-                return {
-                  ...repo,
-                  readme: readmeResponse.data
-                }
-              }
-              return repo
-            } catch (error) {
-              if (axios.isAxiosError(error) && error.response?.status === 404) {
-                console.log(`No README found for ${repo.name}`)
-              } else {
-                console.error(`Error fetching README for ${repo.name}:`, error)
-              }
-              return repo
-            }
-          })
+        const filteredRepos = reposResponse.data.filter(
+          (repo) => repo.name.toLowerCase() !== 'farasalgh'
         )
-
-        setRepos(reposWithReadme)
-      } catch (error) {
-        console.error('Error fetching repositories:', error)
-        if (axios.isAxiosError(error)) {
-          if (error.response?.status === 401) {
-            setError('GitHub token is invalid or expired. Please check your .env.local file.')
-          } else if (error.response?.status === 403) {
-            setError('Rate limit exceeded. Please try again later or add a GitHub token.')
-          } else {
-            setError('Failed to fetch repositories. Please try again later.')
+        
+        setRepos(filteredRepos)
+        
+        // Fetch READMEs for each repository
+        const readmePromises = filteredRepos.map(async (repo) => {
+          try {
+            const readmeResponse = await axios.get<ReadmeContent>(
+              `https://api.github.com/repos/farasalgh/${repo.name}/readme`,
+              {
+                headers: {
+                  Accept: 'application/vnd.github.v3.raw',
+                },
+              }
+            )
+            return { repoName: repo.name, content: readmeResponse.data }
+          } catch (readmeError) {
+            console.error(`Error fetching README for ${repo.name}:`, readmeError)
+            return { repoName: repo.name, content: '' }
           }
-        } else {
-          setError('An unexpected error occurred. Please try again later.')
-        }
+        })
+
+        const readmeResults = await Promise.all(readmePromises)
+        const readmeMap = readmeResults.reduce((acc, { repoName, content }) => {
+          acc[repoName] = content
+          return acc
+        }, {} as Record<string, string>)
+
+        setReadmes(readmeMap)
+      } catch (err) {
+        console.error('Error fetching repositories:', err)
+        setError('Failed to fetch repositories. Please try again later.')
       } finally {
-        setLoading(false)
+        setIsLoading(false)
       }
     }
 
@@ -228,7 +186,7 @@ const Projects = () => {
           </motion.p>
         </motion.div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="text-center text-gray-600 dark:text-gray-300">
             Loading projects...
           </div>
@@ -252,7 +210,7 @@ const Projects = () => {
                   language={repo.language || 'N/A'}
                   stars={repo.stargazers_count}
                   url={repo.html_url}
-                  readme={repo.readme}
+                  readme={readmes[repo.name]}
                 />
               </motion.div>
             ))}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
+import Image from 'next/image'
 
 interface LanyardData {
   discord_user: {
@@ -73,10 +74,12 @@ const Lanyard = () => {
     >
       <div className="flex items-center space-x-4">
         <div className="relative">
-          <img
-            src={`https://cdn.discordapp.com/avatars/${data.discord_user.id}/${data.discord_user.avatar}.png`}
-            alt={data.discord_user.username}
-            className="w-12 h-12 rounded-full"
+          <Image
+            src="/lanyard.png"
+            alt="Discord Status"
+            width={400}
+            height={100}
+            className="rounded-lg"
           />
           <div
             className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${getStatusColor(
