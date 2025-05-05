@@ -3,18 +3,18 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
+import { StarIcon, CodeBracketIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
 import axios from 'axios'
-import { Github, ExternalLink } from 'lucide-react'
-import { AlertCircle } from 'lucide-react'
 
 interface Repository {
+  id: number
   name: string
-  description: string
+  description: string | null
   html_url: string
-  homepage: string
+  stargazers_count: number
+  language: string | null
   topics: string[]
-  updated_at: string
-  readme: string
+  fork: boolean
 }
 
 type GitHubResponse = Repository[]
@@ -26,7 +26,7 @@ const Projects = () => {
   })
 
   const [repositories, setRepositories] = useState<Repository[]>([])
-  const [loading, setLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -40,13 +40,13 @@ const Projects = () => {
             },
           }
         )
-
+        
         const filteredRepos = response.data
-          .filter((repo) => repo.name !== 'farasalgh')
-          .slice(0, 4)
+          .filter(repo => !repo.fork && repo.name !== 'farasalgh')
+          .slice(0, 6)
 
         const reposWithReadme = await Promise.all(
-          filteredRepos.map(async (repo: Repository) => {
+          filteredRepos.map(async (repo) => {
             try {
               const readmeResponse = await axios.get(
                 `https://api.github.com/repos/farasalgh/${repo.name}/readme`,
@@ -57,53 +57,72 @@ const Projects = () => {
                   },
                 }
               )
-              return { ...repo, readme: readmeResponse.data }
+              
+              // Convert README content to plain text and limit to 100 words
+              const readmeText = readmeResponse.data
+                .replace(/[#*`]/g, '') // Remove markdown syntax
+                .replace(/\n/g, ' ') // Replace newlines with spaces
+                .split(' ')
+                .slice(0, 100)
+                .join(' ') + '...'
+              
+              return {
+                id: repo.id,
+                name: repo.name,
+                description: readmeText,
+                html_url: repo.html_url,
+                stargazers_count: repo.stargazers_count,
+                language: repo.language,
+                topics: repo.topics || [],
+                fork: repo.fork
+              }
             } catch (err) {
               console.error(`Error fetching README for ${repo.name}:`, err)
-              return { ...repo, readme: '' }
+              return {
+                id: repo.id,
+                name: repo.name,
+                description: repo.description || 'No description available',
+                html_url: repo.html_url,
+                stargazers_count: repo.stargazers_count,
+                language: repo.language,
+                topics: repo.topics || [],
+                fork: repo.fork
+              }
             }
           })
         )
-
+        
         setRepositories(reposWithReadme)
       } catch (err) {
         console.error('Error fetching repositories:', err)
-        setError('Failed to fetch repositories')
+        setError('Failed to load projects. Please try again later.')
       } finally {
-        setLoading(false)
+        setIsLoading(false)
       }
     }
 
     fetchRepositories()
   }, [])
 
-  if (loading) {
-    return (
-      <section id="projects" className="py-20 bg-gray-50 dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          </div>
-        </div>
-      </section>
-    )
-  }
-
-  if (error) {
-    return (
-      <section id="projects" className="py-20 bg-gray-50 dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-red-500">
-            <AlertCircle className="w-12 h-12 mx-auto mb-4" />
-            <p>{error}</p>
-          </div>
-        </div>
-      </section>
-    )
+  const fetchReadme = async (repoName: string) => {
+    try {
+      const response = await axios.get(
+        `https://raw.githubusercontent.com/farasalgh/${repoName}/main/README.md`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_GITHUB_TOKEN}`,
+          },
+        }
+      )
+      return response.data
+    } catch (err) {
+      console.error(`Error fetching README for ${repoName}:`, err)
+      return null
+    }
   }
 
   return (
-    <section id="projects" className="py-20 bg-gray-50 dark:bg-gray-800">
+    <section id="projects" className="relative py-20 bg-gray-50 dark:bg-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           ref={ref}
@@ -118,7 +137,7 @@ const Projects = () => {
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            Projects
+            My Projects
           </motion.h2>
           <motion.p
             className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
@@ -126,93 +145,77 @@ const Projects = () => {
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            Here are some of my recent projects. Check out my GitHub for more!
+            Here are some of my recent projects. Each one represents a unique challenge and learning opportunity.
           </motion.p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {repositories.map((repo, index) => (
-            <motion.div
-              key={repo.name}
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
-              transition={{ 
-                duration: 0.5,
-                delay: index * 0.1,
-                ease: "easeOut"
-              }}
-              whileHover={{ 
-                y: -5,
-                scale: 1.02,
-                transition: { duration: 0.2 }
-              }}
-              className="bg-white dark:bg-gray-700 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
-            >
-              <div className="p-6">
-                <motion.div 
-                  className="flex items-center justify-between mb-4"
-                  whileHover={{ x: 5 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    {repo.name}
-                  </h3>
-                  <div className="flex space-x-4">
-                    <motion.a
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : error ? (
+          <div className="text-center text-red-500">{error}</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {repositories.map((repo, index) => (
+              <motion.div
+                key={repo.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="bg-white dark:bg-gray-700 rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-shadow duration-300"
+              >
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      {repo.name}
+                    </h3>
+                    <a
                       href={repo.html_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                      whileHover={{ scale: 1.2, rotate: 10 }}
-                      whileTap={{ scale: 0.9 }}
                     >
-                      <Github className="w-5 h-5" />
-                    </motion.a>
-                    {repo.homepage && (
-                      <motion.a
-                        href={repo.homepage}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                        whileHover={{ scale: 1.2, rotate: 10 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <ExternalLink className="w-5 h-5" />
-                      </motion.a>
-                    )}
+                      <ArrowTopRightOnSquareIcon className="h-5 w-5" />
+                    </a>
                   </div>
-                </motion.div>
-                <motion.div 
-                  className="flex flex-wrap gap-2 mb-4"
-                  initial={{ opacity: 0 }}
-                  animate={inView ? { opacity: 1 } : {}}
-                  transition={{ delay: index * 0.1 + 0.2 }}
-                >
-                  {repo.topics.map((topic) => (
-                    <motion.span
-                      key={topic}
-                      className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 rounded-full"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      {topic}
-                    </motion.span>
-                  ))}
-                </motion.div>
-                <motion.div 
-                  className="prose dark:prose-invert max-w-none line-clamp-3 text-sm text-gray-600 dark:text-gray-300"
-                  initial={{ opacity: 0 }}
-                  animate={inView ? { opacity: 1 } : {}}
-                  transition={{ delay: index * 0.1 + 0.3 }}
-                >
-                  {repo.readme 
-                    ? repo.readme.split('\n').slice(0, 3).join('\n')
-                    : 'No description available'}
-                </motion.div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+
+                  {repo.description && (
+                    <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
+                      {repo.description}
+                    </p>
+                  )}
+
+                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                    {repo.language && (
+                      <div className="flex items-center">
+                        <CodeBracketIcon className="h-4 w-4 mr-1" />
+                        {repo.language}
+                      </div>
+                    )}
+                    <div className="flex items-center">
+                      <StarIcon className="h-4 w-4 mr-1" />
+                      {repo.stargazers_count}
+                    </div>
+                  </div>
+
+                  {repo.topics.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {repo.topics.map((topic, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-1 text-xs font-medium text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30 rounded-full"
+                        >
+                          {topic}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )

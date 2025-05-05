@@ -111,6 +111,7 @@ const Contact = () => {
       })
       setToast({ message: 'Pesan berhasil dikirim!', type: 'success' })
     } catch (err) {
+      console.error('Error sending message:', err)
       setToast({ 
         message: 'Gagal mengirim pesan. Silakan coba lagi.', 
         type: 'error' 
