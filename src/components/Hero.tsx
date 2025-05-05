@@ -122,7 +122,7 @@ const Hero = () => {
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.3 }}
             >
-              Faraz Alghani
+              Faras Alghani
               <motion.span
                 className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400"
                 initial={{ scaleX: 0 }}

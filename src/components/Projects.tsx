@@ -4,159 +4,99 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
 import axios from 'axios'
-import { StarIcon, CodeBracketIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
 import { Github, ExternalLink } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 
 interface Repository {
-  id: number
   name: string
   description: string
   html_url: string
-  language: string
-  stargazers_count: number
-  readme?: string
+  homepage: string
+  topics: string[]
   updated_at: string
-}
-
-interface ReadmeContent {
-  content: string
-}
-
-const ProjectCard = ({ 
-  title, 
-  description, 
-  language, 
-  stars, 
-  url,
-  readme 
-}: { 
-  title: string
-  description: string
-  language: string
-  stars: number
-  url: string
-  readme?: string
-}) => {
-  const [isHovered, setIsHovered] = useState(false)
-
-  // Function to extract the first paragraph from README
-  const getFirstParagraph = (content: string) => {
-    // Remove markdown syntax and get first paragraph
-    const cleanContent = content
-      .replace(/^#+\s+/gm, '') // Remove headers
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove markdown links
-      .replace(/`([^`]+)`/g, '$1') // Remove inline code
-      .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold
-      .replace(/\*([^*]+)\*/g, '$1') // Remove italic
-      .trim()
-
-    // Get the first paragraph
-    const firstParagraph = cleanContent.split('\n\n')[0]
-    return firstParagraph || description
-  }
-
-  return (
-    <motion.a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group relative block overflow-hidden rounded-2xl bg-white dark:bg-gray-700 shadow-xl transition-all duration-300 hover:shadow-2xl"
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-      whileHover={{ y: -5 }}
-    >
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-            {title}
-          </h3>
-          <motion.div
-            animate={isHovered ? { rotate: 45 } : { rotate: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <ArrowTopRightOnSquareIcon className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
-          </motion.div>
-        </div>
-        
-        <p className="text-gray-600 dark:text-gray-300 mb-6 line-clamp-3">
-          {readme ? getFirstParagraph(readme) : description}
-        </p>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <CodeBracketIcon className="h-4 w-4 text-gray-400" />
-            <span className="text-sm text-gray-500 dark:text-gray-400">{language}</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <StarIcon className="h-4 w-4 text-yellow-400" />
-            <span className="text-sm text-gray-500 dark:text-gray-400">{stars}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-    </motion.a>
-  )
+  readme: string
 }
 
 const Projects = () => {
-  const [repos, setRepos] = useState<Repository[]>([])
-  const [readmes, setReadmes] = useState<Record<string, string>>({})
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [ref, inView] = useInView({
     triggerOnce: true,
     threshold: 0.1,
   })
 
+  const [repositories, setRepositories] = useState<Repository[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   useEffect(() => {
-    const fetchRepos = async () => {
+    const fetchRepositories = async () => {
       try {
-        const reposResponse = await axios.get<Repository[]>(
-          'https://api.github.com/users/farasalgh/repos?sort=updated&direction=desc&per_page=4'
-        )
-        
-        const filteredRepos = reposResponse.data.filter(
-          (repo) => repo.name.toLowerCase() !== 'farasalgh'
-        )
-        
-        setRepos(filteredRepos)
-        
-        // Fetch READMEs for each repository
-        const readmePromises = filteredRepos.map(async (repo) => {
-          try {
-            const readmeResponse = await axios.get<ReadmeContent>(
-              `https://api.github.com/repos/farasalgh/${repo.name}/readme`,
-              {
-                headers: {
-                  Accept: 'application/vnd.github.v3.raw',
-                },
-              }
-            )
-            return { repoName: repo.name, content: readmeResponse.data }
-          } catch (readmeError) {
-            console.error(`Error fetching README for ${repo.name}:`, readmeError)
-            return { repoName: repo.name, content: '' }
+        const response = await axios.get(
+          'https://api.github.com/users/farasalgh/repos?sort=updated&direction=desc',
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.NEXT_PUBLIC_GITHUB_TOKEN}`,
+            },
           }
-        })
+        )
 
-        const readmeResults = await Promise.all(readmePromises)
-        const readmeMap = readmeResults.reduce((acc, { repoName, content }) => {
-          acc[repoName] = typeof content === 'string' ? content : content.content
-          return acc
-        }, {} as Record<string, string>)
+        const filteredRepos = response.data
+          .filter((repo: Repository) => repo.name !== 'farasalgh')
+          .slice(0, 4)
 
-        setReadmes(readmeMap)
+        const reposWithReadme = await Promise.all(
+          filteredRepos.map(async (repo: Repository) => {
+            try {
+              const readmeResponse = await axios.get(
+                `https://api.github.com/repos/farasalgh/${repo.name}/readme`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${process.env.NEXT_PUBLIC_GITHUB_TOKEN}`,
+                    Accept: 'application/vnd.github.v3.raw',
+                  },
+                }
+              )
+              return { ...repo, readme: readmeResponse.data }
+            } catch (err) {
+              return { ...repo, readme: '' }
+            }
+          })
+        )
+
+        setRepositories(reposWithReadme)
       } catch (err) {
-        console.error('Error fetching repositories:', err)
-        setError('Failed to fetch repositories. Please try again later.')
+        setError('Failed to fetch repositories')
       } finally {
-        setIsLoading(false)
+        setLoading(false)
       }
     }
 
-    fetchRepos()
+    fetchRepositories()
   }, [])
+
+  if (loading) {
+    return (
+      <section id="projects" className="py-20 bg-gray-50 dark:bg-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (error) {
+    return (
+      <section id="projects" className="py-20 bg-gray-50 dark:bg-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center text-red-500">
+            <AlertCircle className="w-12 h-12 mx-auto mb-4" />
+            <p>{error}</p>
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section id="projects" className="py-20 bg-gray-50 dark:bg-gray-800">
@@ -174,7 +114,7 @@ const Projects = () => {
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            Featured Projects
+            Projects
           </motion.h2>
           <motion.p
             className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
@@ -182,40 +122,93 @@ const Projects = () => {
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            Explore my latest projects, where I combine creativity with technical expertise to build innovative solutions.
+            Here are some of my recent projects. Check out my GitHub for more!
           </motion.p>
         </motion.div>
 
-        {isLoading ? (
-          <div className="text-center text-gray-600 dark:text-gray-300">
-            Loading projects...
-          </div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-8"
-          >
-            {repos.map((repo, index) => (
-              <motion.div
-                key={repo.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={inView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.8, delay: 0.2 * index }}
-              >
-                <ProjectCard
-                  title={repo.name}
-                  description={repo.description || 'No description available'}
-                  language={repo.language || 'N/A'}
-                  stars={repo.stargazers_count}
-                  url={repo.html_url}
-                  readme={readmes[repo.name]}
-                />
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {repositories.map((repo, index) => (
+            <motion.div
+              key={repo.name}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+              transition={{ 
+                duration: 0.5,
+                delay: index * 0.1,
+                ease: "easeOut"
+              }}
+              whileHover={{ 
+                y: -5,
+                scale: 1.02,
+                transition: { duration: 0.2 }
+              }}
+              className="bg-white dark:bg-gray-700 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
+            >
+              <div className="p-6">
+                <motion.div 
+                  className="flex items-center justify-between mb-4"
+                  whileHover={{ x: 5 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {repo.name}
+                  </h3>
+                  <div className="flex space-x-4">
+                    <motion.a
+                      href={repo.html_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      whileHover={{ scale: 1.2, rotate: 10 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Github className="w-5 h-5" />
+                    </motion.a>
+                    {repo.homepage && (
+                      <motion.a
+                        href={repo.homepage}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        whileHover={{ scale: 1.2, rotate: 10 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <ExternalLink className="w-5 h-5" />
+                      </motion.a>
+                    )}
+                  </div>
+                </motion.div>
+                <motion.div 
+                  className="flex flex-wrap gap-2 mb-4"
+                  initial={{ opacity: 0 }}
+                  animate={inView ? { opacity: 1 } : {}}
+                  transition={{ delay: index * 0.1 + 0.2 }}
+                >
+                  {repo.topics.map((topic) => (
+                    <motion.span
+                      key={topic}
+                      className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 rounded-full"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {topic}
+                    </motion.span>
+                  ))}
+                </motion.div>
+                <motion.div 
+                  className="prose dark:prose-invert max-w-none line-clamp-3 text-sm text-gray-600 dark:text-gray-300"
+                  initial={{ opacity: 0 }}
+                  animate={inView ? { opacity: 1 } : {}}
+                  transition={{ delay: index * 0.1 + 0.3 }}
+                >
+                  {repo.readme 
+                    ? repo.readme.split('\n').slice(0, 3).join('\n')
+                    : 'No description available'}
+                </motion.div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </div>
     </section>
   )
