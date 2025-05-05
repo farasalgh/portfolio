@@ -1,8 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
-import { useState } from 'react'
 import { GlobeAltIcon, BriefcaseIcon, AcademicCapIcon, CodeBracketIcon } from '@heroicons/react/24/outline'
 import axios from 'axios'
 import { Send, AlertCircle, CheckCircle2 } from 'lucide-react'

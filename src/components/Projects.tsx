@@ -17,6 +17,8 @@ interface Repository {
   readme: string
 }
 
+type GitHubResponse = Repository[]
+
 const Projects = () => {
   const [ref, inView] = useInView({
     triggerOnce: true,
@@ -30,7 +32,7 @@ const Projects = () => {
   useEffect(() => {
     const fetchRepositories = async () => {
       try {
-        const response = await axios.get(
+        const response = await axios.get<GitHubResponse>(
           'https://api.github.com/users/farasalgh/repos?sort=updated&direction=desc',
           {
             headers: {
@@ -40,7 +42,7 @@ const Projects = () => {
         )
 
         const filteredRepos = response.data
-          .filter((repo: Repository) => repo.name !== 'farasalgh')
+          .filter((repo) => repo.name !== 'farasalgh')
           .slice(0, 4)
 
         const reposWithReadme = await Promise.all(
@@ -57,6 +59,7 @@ const Projects = () => {
               )
               return { ...repo, readme: readmeResponse.data }
             } catch (err) {
+              console.error(`Error fetching README for ${repo.name}:`, err)
               return { ...repo, readme: '' }
             }
           })
@@ -64,6 +67,7 @@ const Projects = () => {
 
         setRepositories(reposWithReadme)
       } catch (err) {
+        console.error('Error fetching repositories:', err)
         setError('Failed to fetch repositories')
       } finally {
         setLoading(false)
