@@ -40,7 +40,7 @@ const Footer = () => {
             </a>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            © {new Date().getFullYear()} Your Name. All rights reserved.
+            © {new Date().getFullYear()} farasalgh. All rights reserved.
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Built with Next.js, TypeScript, and Tailwind CSS
