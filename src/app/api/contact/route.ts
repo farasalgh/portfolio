@@ -11,10 +11,10 @@ interface SMTPError {
 export async function POST(request: Request) {
   try {
     // Validate environment variables first
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
       console.error('Missing email configuration:', {
-        user: process.env.EMAIL_USER ? 'Set' : 'Not Set',
-        pass: process.env.EMAIL_PASS ? 'Set' : 'Not Set'
+        user: process.env.GMAIL_USER ? 'Set' : 'Not Set',
+        pass: process.env.GMAIL_APP_PASSWORD ? 'Set' : 'Not Set'
       })
       return NextResponse.json(
         { error: 'Email service is not properly configured' },
@@ -38,8 +38,8 @@ export async function POST(request: Request) {
       port: 587,
       secure: false,
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
       },
       debug: true,
       logger: true
@@ -56,8 +56,8 @@ export async function POST(request: Request) {
         message: error.message,
         code: error.code,
         command: error.command,
-        user: process.env.EMAIL_USER ? 'Set' : 'Not Set',
-        pass: process.env.EMAIL_PASS ? 'Set' : 'Not Set'
+        user: process.env.GMAIL_USER ? 'Set' : 'Not Set',
+        pass: process.env.GMAIL_APP_PASSWORD ? 'Set' : 'Not Set'
       })
       return NextResponse.json(
         { error: 'Email service configuration error' },
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     try {
       console.log('Attempting to send email...')
       const info = await transporter.sendMail({
-        from: `"Portfolio Contact Form" <${process.env.EMAIL_USER}>`,
+        from: `"Portfolio Contact Form" <${process.env.GMAIL_USER}>`,
         to: 'alghanifaras@gmail.com',
         replyTo: email,
         subject: `New Contact Form Submission: ${subject}`,
