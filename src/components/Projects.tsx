@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
 import { StarIcon, CodeBracketIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 
 interface Repository {
   id: number
@@ -77,7 +77,11 @@ const Projects = () => {
                 fork: repo.fork
               }
             } catch (err) {
-              console.error(`Error fetching README for ${repo.name}:`, err)
+              if (err instanceof AxiosError) {
+                console.error(`Error fetching README for ${repo.name}:`, err.message)
+              } else {
+                console.error(`Error fetching README for ${repo.name}:`, err)
+              }
               return {
                 id: repo.id,
                 name: repo.name,
@@ -94,8 +98,13 @@ const Projects = () => {
         
         setRepositories(reposWithReadme)
       } catch (err) {
-        console.error('Error fetching repositories:', err)
-        setError('Failed to load projects. Please try again later.')
+        if (err instanceof AxiosError) {
+          console.error('Error fetching repositories:', err.message)
+          setError('Failed to load projects. Please try again later.')
+        } else {
+          console.error('Error fetching repositories:', err)
+          setError('An unexpected error occurred. Please try again later.')
+        }
       } finally {
         setIsLoading(false)
       }
@@ -116,7 +125,11 @@ const Projects = () => {
       )
       return response.data
     } catch (err) {
-      console.error(`Error fetching README for ${repoName}:`, err)
+      if (err instanceof AxiosError) {
+        console.error(`Error fetching README for ${repoName}:`, err.message)
+      } else {
+        console.error(`Error fetching README for ${repoName}:`, err)
+      }
       return null
     }
   }

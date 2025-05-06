@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
 import { GlobeAltIcon, BriefcaseIcon, AcademicCapIcon, CodeBracketIcon } from '@heroicons/react/24/outline'
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 import { Send, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 interface TimelineItemProps {
@@ -111,11 +111,19 @@ const Contact = () => {
       })
       setToast({ message: 'Pesan berhasil dikirim!', type: 'success' })
     } catch (err) {
-      console.error('Error sending message:', err)
-      setToast({ 
-        message: 'Gagal mengirim pesan. Silakan coba lagi.', 
-        type: 'error' 
-      })
+      if (err instanceof AxiosError) {
+        console.error('Error sending message:', err.message)
+        setToast({ 
+          message: 'Gagal mengirim pesan. Silakan coba lagi.', 
+          type: 'error' 
+        })
+      } else {
+        console.error('Error sending message:', err)
+        setToast({ 
+          message: 'Terjadi kesalahan yang tidak terduga. Silakan coba lagi.', 
+          type: 'error' 
+        })
+      }
     } finally {
       setIsSubmitting(false)
     }
