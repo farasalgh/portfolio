@@ -74,13 +74,20 @@ const Toast = ({ message, type, onClose }: ToastProps) => {
   )
 }
 
+interface FormData {
+  name: string
+  email: string
+  subject: string
+  message: string
+}
+
 const Contact = () => {
   const [ref, inView] = useInView({
     triggerOnce: true,
     threshold: 0.1,
   })
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
     subject: '',

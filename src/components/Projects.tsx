@@ -19,6 +19,11 @@ interface Repository {
 
 type GitHubResponse = Repository[]
 
+interface ErrorState {
+  message: string
+  type: 'error'
+}
+
 const Projects = () => {
   const [ref, inView] = useInView({
     triggerOnce: true,
@@ -27,7 +32,7 @@ const Projects = () => {
 
   const [repositories, setRepositories] = useState<Repository[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ErrorState | null>(null)
 
   useEffect(() => {
     const fetchRepositories = async () => {
@@ -100,10 +105,16 @@ const Projects = () => {
       } catch (err) {
         if (err instanceof AxiosError) {
           console.error('Error fetching repositories:', err.message)
-          setError('Failed to load projects. Please try again later.')
+          setError({ 
+            message: 'Failed to load projects. Please try again later.',
+            type: 'error'
+          })
         } else {
           console.error('Error fetching repositories:', err)
-          setError('An unexpected error occurred. Please try again later.')
+          setError({ 
+            message: 'An unexpected error occurred. Please try again later.',
+            type: 'error'
+          })
         }
       } finally {
         setIsLoading(false)
@@ -167,7 +178,7 @@ const Projects = () => {
             <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : error ? (
-          <div className="text-center text-red-500">{error}</div>
+          <div className="text-center text-red-500">{error.message}</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {repositories.map((repo, index) => (
