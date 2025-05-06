@@ -1,4 +1,4 @@
-# Faraz Alghani's Portfolio
+# Faras Alghani's Portfolio
 
 A modern, responsive portfolio website built with Next.js, TypeScript, Tailwind CSS, and Framer Motion.
 
