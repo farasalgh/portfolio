@@ -124,27 +124,6 @@ const Projects = () => {
     fetchRepositories()
   }, [])
 
-  const fetchReadme = async (repoName: string) => {
-    try {
-      const response = await axios.get(
-        `https://raw.githubusercontent.com/farasalgh/${repoName}/main/README.md`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_GITHUB_TOKEN}`,
-          },
-        }
-      )
-      return response.data
-    } catch (err) {
-      if (err instanceof AxiosError) {
-        console.error(`Error fetching README for ${repoName}:`, err.message)
-      } else {
-        console.error(`Error fetching README for ${repoName}:`, err)
-      }
-      return null
-    }
-  }
-
   return (
     <section id="projects" className="relative py-20 bg-gray-50 dark:bg-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
