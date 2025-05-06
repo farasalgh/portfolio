@@ -10,6 +10,18 @@ interface SMTPError {
 
 export async function POST(request: Request) {
   try {
+    // Validate environment variables first
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error('Missing email configuration:', {
+        user: process.env.EMAIL_USER ? 'Set' : 'Not Set',
+        pass: process.env.EMAIL_PASS ? 'Set' : 'Not Set'
+      })
+      return NextResponse.json(
+        { error: 'Email service is not properly configured' },
+        { status: 500 }
+      )
+    }
+
     const { name, email, subject, message } = await request.json()
 
     // Validate input
@@ -20,12 +32,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Log environment variables (without exposing sensitive data)
-    console.log('Email configuration:', {
-      user: process.env.EMAIL_USER ? 'Set' : 'Not Set',
-      pass: process.env.EMAIL_PASS ? 'Set' : 'Not Set'
-    })
-
     // Create transporter with specific SMTP settings
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
@@ -35,8 +41,8 @@ export async function POST(request: Request) {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      debug: true, // Enable debug logging
-      logger: true // Enable logger
+      debug: true,
+      logger: true
     })
 
     // Verify transporter configuration
@@ -49,7 +55,9 @@ export async function POST(request: Request) {
       console.error('SMTP configuration error:', {
         message: error.message,
         code: error.code,
-        command: error.command
+        command: error.command,
+        user: process.env.EMAIL_USER ? 'Set' : 'Not Set',
+        pass: process.env.EMAIL_PASS ? 'Set' : 'Not Set'
       })
       return NextResponse.json(
         { error: 'Email service configuration error' },
